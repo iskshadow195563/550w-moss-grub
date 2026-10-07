@@ -1,0 +1,91 @@
+# 550W MOSS / 720p. Menu titles and countdown come from GRUB.
+desktop-image: "background.png"
+desktop-color: "#050809"
+title-text: ""
+message-font: "MOSS Text Regular 12"
+message-color: "#ffffff"
+message-bg-color: "#050809"
+terminal-font: "MOSS CJK Regular 18"
+terminal-box: "terminal_*.png"
+terminal-border: "12"
+
++ boot_menu {
+    left = 58%
+    top = 19%
+    width = 40%
+    height = 44%
+    item_font = "MOSS CJK Regular 18"
+    selected_item_font = "inherit"
+    item_color = "#dbe0e2"
+    selected_item_color = "#ffffff"
+    icon_width = 36
+    icon_height = 36
+    item_height = 62
+    item_padding = 10
+    item_icon_space = 10
+    item_spacing = 9
+    item_pixmap_style = "row_*.png"
+    selected_item_pixmap_style = "selected_*.png"
+    scrollbar = true
+    scrollbar_frame = "scrollbar_*.png"
+    scrollbar_thumb = "thumb_*.png"
+    scrollbar_width = 8
+}
++ label {
+    left = 58%
+    top = 67%
+    width = 38%
+    height = 3%
+    text = "MOSS / BOOT CONTROL"
+    font = "MOSS Text Regular 12"
+    color = "#ff1935"
+}
++ label {
+    left = 58%
+    top = 71%
+    width = 38%
+    height = 3%
+    text = "UP / DOWN    Select system"
+    font = "MOSS Text Regular 12"
+    color = "#dbe0e2"
+}
++ label {
+    left = 58%
+    top = 74%
+    width = 38%
+    height = 3%
+    text = "ENTER        Boot selected entry"
+    font = "MOSS Text Regular 12"
+    color = "#dbe0e2"
+}
++ label {
+    left = 58%
+    top = 77%
+    width = 38%
+    height = 3%
+    text = "ESC          Return from submenu"
+    font = "MOSS Text Regular 12"
+    color = "#dbe0e2"
+}
++ label {
+    left = 58%
+    top = 80%
+    width = 38%
+    height = 3%
+    text = "E  Edit entry   /   C  Command line"
+    font = "MOSS Text Regular 12"
+    color = "#dbe0e2"
+}
++ progress_bar {
+    id = "__timeout__"
+    left = 58%
+    top = 88%
+    width = 38%
+    height = 4%
+    fg_color = "#ee001d"
+    bg_color = "#171e22"
+    border_color = "#9fa9ae"
+    text_color = "#ffffff"
+    font = "MOSS Text Regular 12"
+    text = "AUTO BOOT IN %d s"
+}
