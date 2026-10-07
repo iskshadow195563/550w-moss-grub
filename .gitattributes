@@ -1,0 +1,6 @@
+*.sh text eol=lf
+*.cfg text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.png binary
+*.pf2 binary

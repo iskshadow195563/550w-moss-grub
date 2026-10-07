@@ -1,0 +1,5 @@
+.tools/
+dist/
+__pycache__/
+tests/.work/
+docs/*.ppm
