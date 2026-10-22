@@ -3,6 +3,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {
+    # Fits four rows even when firmware / gfxterm falls back to 640x480.
+    "compat": (14, 12, 32, 8, 24, 4),
     "720p": (18, 12, 62, 9, 36, 10),
     "1080p": (26, 18, 94, 14, 56, 16),
     "1440p": (34, 24, 124, 18, 72, 22),
@@ -10,6 +12,7 @@ PROFILES = {
 }
 
 for profile, (menu_font, help_font, row, spacing, icon, pad) in PROFILES.items():
+    box_prefix = "compact-" if profile == "compat" else ""
     content = f'''# 550W MOSS / {profile}. Menu titles and countdown come from GRUB.
 desktop-image: "background.png"
 desktop-color: "#050809"
@@ -36,8 +39,8 @@ terminal-border: "12"
     item_padding = {pad}
     item_icon_space = {pad}
     item_spacing = {spacing}
-    item_pixmap_style = "row_*.png"
-    selected_item_pixmap_style = "selected_*.png"
+    item_pixmap_style = "{box_prefix}row_*.png"
+    selected_item_pixmap_style = "{box_prefix}selected_*.png"
     scrollbar = true
     scrollbar_frame = "scrollbar_*.png"
     scrollbar_thumb = "thumb_*.png"
@@ -104,4 +107,4 @@ terminal-border: "12"
 '''
     (ROOT / "theme" / f"theme-{profile}.txt").write_text(content, encoding="utf-8", newline="\n")
 (ROOT / "theme" / "theme.txt").write_bytes((ROOT / "theme" / "theme-1080p.txt").read_bytes())
-print("Generated 720p, 1080p, 1440p, 4k GRUB theme layouts")
+print("Generated compat, 720p, 1080p, 1440p, 4k GRUB theme layouts")

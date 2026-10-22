@@ -10,6 +10,21 @@ if [[ -d /sys/firmware/efi ]]; then printf '[OK] 当前以 UEFI 模式启动\n';
 for cmd in grub-mkconfig grub-script-check; do
     if command -v "$cmd" >/dev/null; then printf '[OK] %s 可用\n' "$cmd"; else printf '[缺少] %s\n' "$cmd"; fi
 done
+printf '\nGRUB 版本与主题显示设置：\n'
+grub-mkconfig --version 2>/dev/null || true
+for file in /etc/default/grub.d/zzzz-550w-moss.cfg /etc/grub.d/00_550w_moss_font; do
+    if [[ -r "$file" ]]; then
+        printf '\n%s\n' "$file"
+        grep -E '^(GRUB_(FONT|THEME|GFXMODE|TERMINAL_OUTPUT|TIMEOUT)|set gfxterm_font|export gfxterm_font)' "$file" || true
+    fi
+done
+if [[ -r /boot/grub/themes/550w-moss/theme.txt ]]; then
+    printf '\n当前主题布局：\n'
+    head -n 1 /boot/grub/themes/550w-moss/theme.txt
+    grep -E '^[[:space:]]*(item_height|icon_width|icon_height|item_font)[[:space:]]*=' /boot/grub/themes/550w-moss/theme.txt || true
+    printf '\n已安装字体（不是打包内的全部字体）：\n'
+    find /boot/grub/themes/550w-moss -maxdepth 1 -name '*.pf2' -printf '%f\n'
+fi
 if [[ -r /boot/grub/grub.cfg ]]; then
     printf '\n现有启动项：\n'
     grep -E '^[[:space:]]*(menuentry|submenu)[[:space:]]' /boot/grub/grub.cfg || true
@@ -24,4 +39,5 @@ else
     printf '[提示] /boot/efi 中未找到 Windows EFI 文件；它可能位于另一块磁盘的 EFI 分区\n'
 fi
 printf '\n显示模式请在 GRUB 中按 C，运行 videoinfo 查询（按 Esc 返回）。\n'
+printf '若菜单变为一个大图标，可用新版安装包执行 sudo bash install.sh --safe-mode。\n'
 printf '本脚本不会调整 EFI 启动顺序、启用 os-prober 或添加启动项。\n'

@@ -4,6 +4,7 @@ umask 022
 readonly SYS_ROOT=""
 THEME="$SYS_ROOT/boot/grub/themes/550w-moss"
 DROPIN="$SYS_ROOT/etc/default/grub.d/zzzz-550w-moss.cfg"
+HOOK="$SYS_ROOT/etc/grub.d/00_550w_moss_font"
 STATE="$SYS_ROOT/var/lib/550w-moss"
 CFG="$SYS_ROOT/boot/grub/grub.cfg"
 fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
@@ -12,17 +13,22 @@ fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
 if grep -qiE 'microsoft|wsl' /proc/sys/kernel/osrelease; then fail '请在已安装的 Ubuntu 中运行，不能在 WSL 中卸载'; fi
 ((EUID == 0)) || fail '请使用 sudo bash uninstall.sh'
 [[ -f "$STATE/managed" && $(cat "$STATE/managed") == '550w-moss-v1' ]] || fail '没有找到本安装包的安装记录'
+if [[ -e "$HOOK" ]]; then
+    grep -qxF '# Managed by 550W MOSS: pin gfxterm font.' "$HOOK" || fail '字体配置脚本不属于本包，已停止以避免删除其他文件'
+fi
 for cmd in grub-mkconfig grub-script-check flock; do command -v "$cmd" >/dev/null || fail "缺少工具：$cmd"; done
 exec 9>"$SYS_ROOT/run/lock/550w-moss.lock"
 flock -n 9 || fail '另一个 MOSS 安装或卸载进程正在运行'
 WORK=$(mktemp -d "$SYS_ROOT/var/tmp/550w-moss-remove.XXXXXX")
-HAD_DROPIN=0; COMMITTED=0
+HAD_DROPIN=0; HAD_HOOK=0; COMMITTED=0
 [[ ! -f "$DROPIN" ]] || { HAD_DROPIN=1; cp -a -- "$DROPIN" "$WORK/dropin"; }
+[[ ! -f "$HOOK" ]] || { HAD_HOOK=1; cp -a -- "$HOOK" "$WORK/hook"; }
 CANDIDATE=$(mktemp "$SYS_ROOT/boot/grub/.moss-remove.cfg.XXXXXX")
 cleanup() {
     local code=$?
     trap - EXIT
     if (( ! COMMITTED && HAD_DROPIN )); then cp -a -- "$WORK/dropin" "$DROPIN"; fi
+    if (( ! COMMITTED && HAD_HOOK )); then cp -a -- "$WORK/hook" "$HOOK"; fi
     rm -f -- "$CANDIDATE"
     rm -rf -- "$WORK"
     exit "$code"
@@ -31,6 +37,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 rm -f -- "$DROPIN"
+rm -f -- "$HOOK"
 grub-mkconfig -o "$CANDIDATE"
 grub-script-check "$CANDIDATE"
 grep -Eq '^[[:space:]]*menuentry[[:space:]]' "$CANDIDATE" || fail '生成的配置没有启动项，已恢复主题配置'

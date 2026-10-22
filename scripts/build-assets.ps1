@@ -14,22 +14,25 @@ function Write-Png($Path, $Width, $Height, [scriptblock]$Draw) {
     $canvas.Dispose(); $bitmap.Dispose()
 }
 function Color($Hex) { [System.Drawing.ColorTranslator]::FromHtml($Hex) }
-foreach ($style in @('selected', 'row', 'terminal', 'scrollbar', 'thumb')) {
+foreach ($style in @('selected', 'row', 'terminal', 'scrollbar', 'thumb', 'compact-selected', 'compact-row')) {
     switch ($style) {
         'selected' { $border = '#ff0022'; $fill = '#57040c'; $edge = 3 }
         'row' { $border = '#707779'; $fill = '#080c0d'; $edge = 2 }
         'terminal' { $border = '#aeb8bc'; $fill = '#050809'; $edge = 2 }
         'scrollbar' { $border = '#40474b'; $fill = '#13191d'; $edge = 1 }
         'thumb' { $border = '#ff0022'; $fill = '#ba001a'; $edge = 1 }
+        'compact-selected' { $border = '#ff0022'; $fill = '#57040c'; $edge = 1 }
+        'compact-row' { $border = '#707779'; $fill = '#080c0d'; $edge = 1 }
     }
+    $sliceSize = if ($style.StartsWith('compact-')) { 4 } else { 12 }
     foreach ($slice in @('c','n','s','e','w','nw','ne','sw','se')) {
-        Write-Png (Join-Path $assetRoot "${style}_${slice}.png") 12 12 {
+        Write-Png (Join-Path $assetRoot "${style}_${slice}.png") $sliceSize $sliceSize {
             param($g, $w, $h)
             $brush = [System.Drawing.SolidBrush]::new((Color $fill))
             $g.FillRectangle($brush, 0, 0, $w, $h)
             $brush.Dispose()
-            if ($style -eq 'selected' -and $slice -eq 'c') {
-                $gradient = [System.Drawing.Drawing2D.LinearGradientBrush]::new([System.Drawing.Point]::new(0,0), [System.Drawing.Point]::new(12,0), (Color '#8b0011'), (Color '#300208'))
+            if ($style.EndsWith('selected') -and $slice -eq 'c') {
+                $gradient = [System.Drawing.Drawing2D.LinearGradientBrush]::new([System.Drawing.Point]::new(0,0), [System.Drawing.Point]::new($w,0), (Color '#8b0011'), (Color '#300208'))
                 $g.FillRectangle($gradient,0,0,$w,$h); $gradient.Dispose()
             }
             $brush = [System.Drawing.SolidBrush]::new((Color $border))
@@ -37,7 +40,7 @@ foreach ($style in @('selected', 'row', 'terminal', 'scrollbar', 'thumb')) {
             if ($slice.Contains('s')) { $g.FillRectangle($brush,0,($h-$edge),$w,$edge) }
             if ($slice.Contains('w')) { $g.FillRectangle($brush,0,0,$edge,$h) }
             if ($slice.Contains('e')) { $g.FillRectangle($brush,($w-$edge),0,$edge,$h) }
-            if ($style -eq 'selected' -and $slice -eq 'w') { $g.FillRectangle($brush,0,0,8,$h) }
+            if ($style.EndsWith('selected') -and $slice -eq 'w') { $g.FillRectangle($brush,0,0,[Math]::Min(8, $w),$h) }
             $brush.Dispose()
         }
     }
@@ -85,4 +88,4 @@ Write-Png (Join-Path $assetRoot 'icons/uefi.png') 128 128 {
 foreach ($name in @('gnu-linux','linux','recovery')) { Copy-Item -LiteralPath (Join-Path $assetRoot 'icons/ubuntu.png') -Destination (Join-Path $assetRoot "icons/$name.png") }
 foreach ($name in @('advanced','settings')) { Copy-Item -LiteralPath (Join-Path $assetRoot 'icons/submenu.png') -Destination (Join-Path $assetRoot "icons/$name.png") }
 Copy-Item -LiteralPath (Join-Path $assetRoot 'icons/uefi.png') -Destination (Join-Path $assetRoot 'icons/efi.png')
-Write-Output '已生成图标与 GRUB 九宫格素材。'
+Write-Output 'Generated GRUB icons and nine-slice assets.'

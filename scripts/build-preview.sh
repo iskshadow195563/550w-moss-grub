@@ -4,30 +4,41 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 PROFILE=${1:-1080p}
 case "$PROFILE" in
-    720p) MODE=1280x720,1280x800,1024x768; FONT=18 ;;
-    1080p) MODE=1920x1080; FONT=26 ;;
-    1440p) MODE=2560x1440; FONT=34 ;;
-    4k) MODE=3840x2160; FONT=50 ;;
-    *) printf '用法：bash scripts/build-preview.sh [720p|1080p|1440p|4k]\n' >&2; exit 1 ;;
+    compat) MODE=1024x768,800x600,640x480; FONT=14; HELP_FONT=12 ;;
+    720p) MODE=1280x720,1280x800,1024x768; FONT=18; HELP_FONT=12 ;;
+    1080p) MODE=1920x1080; FONT=26; HELP_FONT=18 ;;
+    1440p) MODE=2560x1440; FONT=34; HELP_FONT=24 ;;
+    4k) MODE=3840x2160; FONT=50; HELP_FONT=34 ;;
+    *) printf '用法：bash scripts/build-preview.sh [compat|720p|1080p|1440p|4k]\n' >&2; exit 1 ;;
 esac
+# Used by isolated VM tests to exercise firmware resolution fallback.
+MODE=${MOSS_PREVIEW_GFXMODE:-$MODE}
 command -v grub-mkrescue >/dev/null
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
 mkdir -p "$WORK/boot/grub/themes/550w-moss" "$ROOT/dist"
 cp -a -- "$ROOT/theme/." "$WORK/boot/grub/themes/550w-moss/"
 cp -- "$ROOT/theme/theme-$PROFILE.txt" "$WORK/boot/grub/themes/550w-moss/theme.txt"
+for font_file in "$WORK/boot/grub/themes/550w-moss"/*.pf2; do
+    case "${font_file##*/}" in
+        "moss-cjk-$FONT.pf2"|moss-cjk-14.pf2|"moss-text-$HELP_FONT.pf2") ;;
+        *) rm -f -- "$font_file" ;;
+    esac
+done
 cat > "$WORK/boot/grub/grub.cfg" <<EOF
 insmod all_video
 insmod gfxterm
 insmod gfxmenu
 insmod png
+loadfont /boot/grub/themes/550w-moss/moss-cjk-14.pf2
+set gfxterm_font="MOSS CJK Regular 14"
+export gfxterm_font
 EOF
-for font in "$ROOT/theme"/*.pf2; do
+for font in "$WORK/boot/grub/themes/550w-moss"/*.pf2; do
     printf 'loadfont /boot/grub/themes/550w-moss/%s\n' "$(basename -- "$font")" >> "$WORK/boot/grub/grub.cfg"
 done
 cat >> "$WORK/boot/grub/grub.cfg" <<EOF
 set gfxmode=$MODE,auto
-set gfxterm_font="MOSS CJK Regular $FONT"
 terminal_output gfxterm
 set theme=/boot/grub/themes/550w-moss/theme.txt
 export theme
