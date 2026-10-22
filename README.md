@@ -6,6 +6,8 @@
 
 下载：[最新安装包 550w-moss-grub.zip](https://github.com/iskshadow195563/550w-moss-grub/releases/latest/download/550w-moss-grub.zip) · [SHA256 校验文件](https://github.com/iskshadow195563/550w-moss-grub/releases/latest/download/550w-moss-grub.zip.sha256)
 
+**v1.0.1 显示兼容修订：**普通电脑继续使用默认或指定分辨率的标准布局；如果其他电脑出现菜单突然只剩一个大图标，可使用新增的 `--safe-mode`。同一个安装包包含两种方式，详细步骤见下文。
+
 ## 在 Ubuntu 中安装
 
 1. 重启进入电脑上已安装的 Ubuntu，将 `550w-moss-grub.zip` 复制到 Ubuntu 的下载目录并解压。
@@ -44,9 +46,26 @@ sudo bash install.sh --resolution 1080p --timeout 8
 
 支持 `720p`、`1080p`、`1440p`、`4k`。主题按 16:9 设计，背景会由 GRUB 缩放到显示模式；其他屏幕比例可能变形。图形模式由固件提供，不等同于 Windows / Ubuntu 桌面支持的分辨率。在 GRUB 菜单按 **C**，输入 `videoinfo` 可查询模式，按 **Esc** 返回。
 
-高分辨率不可用时脚本提供较低模式和 `auto` 回退。菜单字体与行高跟随所选布局固定；回退后若字体偏大，可重新以 `1080p` 或 `720p` 安装。菜单支持滚动，额外启动项与子菜单仍可访问。
+高分辨率不可用时脚本提供较低模式和 `auto` 回退。菜单字体与行高跟随所选布局固定；回退后若字体偏大，可重新以 `1080p` 或 `720p` 安装，或使用下面的安全布局。菜单支持滚动，额外启动项与子菜单仍可访问。
 
 **图片分辨率说明：**原始参考图为 3840×2160，保存在源码的 `assets/original-reference.png`。经过 imagegen 清理动态区域的实际背景为 1672×941，由 GRUB 缩放显示。4K 指 3840×2160 的菜单布局与显示模式，背景并非原生 4K，也不是原图逐像素保留版本。
+
+### 其他电脑突然只显示一个大图标
+
+请使用修订版安装包，在**出问题那台电脑的 Ubuntu** 中重新安装兼容布局：
+
+```bash
+sudo bash install.sh --safe-mode --dry-run
+sudo bash install.sh --safe-mode --timeout 8
+```
+
+不需要先卸载。安全模式采用小字号、24 像素图标和紧凑行高；即使图形模式降至 640×480，也能同时显示四个菜单项，更多条目仍可滚动。优先尝试 1024×768，再回退到 800×600、640×480；它以可读性和多项显示为目标，背景可能因固件提供的屏幕比例而拉伸。默认系统和真实启动项保持原配置。
+
+修订版只将当前布局需要的字体和 14 像素控制台字体安装到 `/boot`，并在图形终端初始化前固定 `gfxterm_font`，避免加载其他分辨率的大字号字体后，终端重建时任意选择字体。`GRUB_FONT` 只指定加载哪个字体文件，并不等价于固定 `gfxterm_font`。
+
+如果安全模式稳定，且 `videoinfo` 确认固件支持目标模式，可重新运行 `sudo bash install.sh --resolution 1080p` 等命令恢复大字号布局。若同一次开机仍出现突变，请保存 `sudo bash check.sh` 输出，并在 GRUB 按 **C**、执行 `videoinfo` 和 `echo $gfxmode` 记录显示模式；`$gfxmode` 是请求模式列表，不能单独证明实际模式。排查时需要结合 `videoinfo` 的当前模式标记。
+
+已在 Ubuntu GRUB 2.12 的独立虚拟机检查正常布局与低分辨率场景；目前没有复现用户电脑上等待／切换导致突变的完整触发过程，不能仅凭照片确定是固件模式切换、字型回退还是其他配置造成。
 
 ## 使用
 
@@ -68,9 +87,10 @@ sudo bash install.sh --resolution 1080p --timeout 8
 
 - `/boot/grub/themes/550w-moss/`：背景、字体、图标与主题。
 - `/etc/default/grub.d/zzzz-550w-moss.cfg`：主题、图形输出、显示模式和等待时间。
+- `/etc/grub.d/00_550w_moss_font`：在 `00_header` 初始化图形终端前固定小字号控制台字体；卸载时移除。
 - `/var/lib/550w-moss/grub.cfg.before-install`：首次安装前的原始 GRUB 配置备份。
 
-原有 `/etc/default/grub` 和 `/etc/grub.d/` 脚本保持原样。脚本不会修改磁盘分区、Windows EFI 文件、Secure Boot、固件启动顺序或 GRUB 默认系统，也不启用 `os-prober`。若原有 GRUB 使用串口或纯文本输出，本主题片段会切换菜单输出为 `gfxterm`，卸载时恢复原配置的输出方式。
+原有 `/etc/default/grub` 和已有 `/etc/grub.d/` 脚本保持原样；仅新增上面列出的本包字体脚本。脚本不会修改磁盘分区、Windows EFI 文件、Secure Boot、固件启动顺序或 GRUB 默认系统，也不启用 `os-prober`。若原有 GRUB 使用串口或纯文本输出，本主题片段会切换菜单输出为 `gfxterm`，卸载时恢复原配置的输出方式。
 
 安装先生成临时候选 `grub.cfg`，调用 `grub-script-check` 验证，并检查原菜单中的 Windows 和 Linux 内核入口是否仍存在，最后替换当前配置。出错时恢复安装前的配置和主题；重复安装保留首次备份。如果目标主题位置已存在不属于本包的文件，脚本停止以避免覆盖。
 
