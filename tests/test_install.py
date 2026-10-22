@@ -29,7 +29,7 @@ class TransactionTests(unittest.TestCase):
         self.package = self.base / "package"
         self.package.mkdir()
         (self.package / "theme").symlink_to(PROJECT / "theme", target_is_directory=True)
-        for rel in ("boot/grub", "etc/default/grub.d", "var/tmp", "var/lib", "run/lock", "proc/sys/kernel"):
+        for rel in ("boot/grub", "etc/default/grub.d", "etc/grub.d", "var/tmp", "var/lib", "run/lock", "proc/sys/kernel"):
             (self.root / rel).mkdir(parents=True)
         self.original = self.root / "boot/grub/grub.cfg"
         self.original.write_text(BASE_CFG)
@@ -38,6 +38,7 @@ class TransactionTests(unittest.TestCase):
         (self.root / "proc/sys/kernel/osrelease").write_text("6.8-test-linux")
         self.theme = self.root / "boot/grub/themes/550w-moss"
         self.dropin = self.root / "etc/default/grub.d/zzzz-550w-moss.cfg"
+        self.hook = self.root / "etc/grub.d/00_550w_moss_font"
         self.state = self.root / "var/lib/550w-moss"
         for name in ("install.sh", "uninstall.sh"):
             script = (PROJECT / name).read_text()
@@ -48,7 +49,7 @@ class TransactionTests(unittest.TestCase):
         self.bin.mkdir()
         self.command("grub-mkconfig", '''#!/usr/bin/env python3
 # Ubuntu sources /etc/default/grub.d/*.cfg
-import os, pathlib, sys
+import os, pathlib, subprocess, sys
 if os.environ.get('CASE') == 'generation-fail': sys.exit(7)
 data = os.environ['FIXTURE_CFG']
 if os.environ.get('CASE') == 'syntax-fail': data = "menuentry 'broken' {\\n"
@@ -56,13 +57,16 @@ if os.environ.get('CASE') == 'windows-lost': data = data.split("menuentry 'Windo
 if os.environ.get('CASE') == 'linux-lost': data = "menuentry 'Windows Boot Manager' { chainloader /bootmgfw.efi }\\n"
 if pathlib.Path(os.environ['DROPIN']).exists() and os.environ.get('CASE') != 'theme-lost':
     data = 'set theme=/boot/grub/themes/550w-moss/theme.txt\\n' + data
+hook = pathlib.Path(os.environ['FONT_HOOK'])
+if hook.exists() and os.environ.get('CASE') != 'font-lock-lost':
+    data = subprocess.check_output(['sh', str(hook)], text=True) + data
 if os.environ.get('CASE') == 'separate-boot': data = data.replace('/boot/grub/', '/grub/')
 pathlib.Path(sys.argv[2]).write_text(data)
 ''')
         checker = os.environ.get("GRUB_SCRIPT_CHECK", "grub-script-check")
         self.command("grub-script-check", f'#!/usr/bin/env bash\nexec "{checker}" "$@"\n')
         self.env = os.environ.copy()
-        self.env.update(PATH=f"{self.bin}:{self.env['PATH']}", FIXTURE_CFG=BASE_CFG, DROPIN=str(self.dropin))
+        self.env.update(PATH=f"{self.bin}:{self.env['PATH']}", FIXTURE_CFG=BASE_CFG, DROPIN=str(self.dropin), FONT_HOOK=str(self.hook))
 
     def command(self, name, code):
         path = self.bin / name
@@ -80,6 +84,7 @@ pathlib.Path(sys.argv[2]).write_text(data)
     def assert_pristine(self):
         self.assertEqual(self.original.read_text(), BASE_CFG)
         self.assertFalse(self.dropin.exists())
+        self.assertFalse(self.hook.exists())
         self.assertFalse(self.theme.exists())
         self.assertFalse(self.state.exists())
         self.assertFalse(list((self.root / "boot/grub").glob(".moss-*.cfg.*")))
@@ -93,6 +98,25 @@ pathlib.Path(sys.argv[2]).write_text(data)
         self.assertIn("linux /vmlinuz", self.original.read_text())
         self.assertEqual((self.theme / "theme.txt").read_bytes(), (PROJECT / "theme/theme-1080p.txt").read_bytes())
         self.assertIn("GRUB_TIMEOUT=8", self.dropin.read_text())
+        self.assertIn('set gfxterm_font="MOSS CJK Regular 14"', self.original.read_text())
+        self.assertEqual({p.name for p in self.theme.glob('*.pf2')}, {'moss-cjk-14.pf2', 'moss-cjk-26.pf2', 'moss-text-18.pf2'})
+
+    def test_safe_mode_uses_compact_layout_and_small_fonts(self):
+        self.run_script(args=("--safe-mode", "--timeout", "-1"))
+        self.assertEqual((self.theme / "theme.txt").read_bytes(), (PROJECT / "theme/theme-compat.txt").read_bytes())
+        self.assertIn('GRUB_GFXMODE="1024x768,800x600,640x480,auto"', self.dropin.read_text())
+        self.assertEqual({p.name for p in self.theme.glob('*.pf2')}, {'moss-cjk-14.pf2', 'moss-text-12.pf2'})
+        self.assertIn('set gfxterm_font="MOSS CJK Regular 14"', self.original.read_text())
+
+    def test_font_pin_missing_from_generated_config_rolls_back(self):
+        self.run_script(case="font-lock-lost", success=False)
+        self.assert_pristine()
+
+    def test_refuses_unmanaged_font_hook(self):
+        self.hook.write_text('#!/bin/sh\necho existing-user-config\n')
+        self.run_script(success=False)
+        self.assertEqual(self.hook.read_text(), '#!/bin/sh\necho existing-user-config\n')
+        self.assertFalse(self.theme.exists())
 
     def test_dry_run_makes_no_changes(self):
         self.run_script(args=("--dry-run", "--resolution", "4k"))
@@ -140,10 +164,12 @@ pathlib.Path(sys.argv[2]).write_text(data)
         before_dropin = self.dropin.read_bytes()
         before_cfg = self.original.read_bytes()
         before_theme = (self.theme / "theme.txt").read_bytes()
+        before_hook = self.hook.read_bytes()
         self.run_script(args=("--resolution", "4k"), case="generation-fail", success=False)
         self.assertEqual(before_dropin, self.dropin.read_bytes())
         self.assertEqual(before_cfg, self.original.read_bytes())
         self.assertEqual(before_theme, (self.theme / "theme.txt").read_bytes())
+        self.assertEqual(before_hook, self.hook.read_bytes())
 
     def test_upgrade_uses_requested_profile(self):
         self.run_script()
@@ -159,15 +185,18 @@ pathlib.Path(sys.argv[2]).write_text(data)
         self.assertIn("/vmlinuz-new", self.original.read_text())
         self.assertFalse(self.theme.exists())
         self.assertFalse(self.dropin.exists())
+        self.assertFalse(self.hook.exists())
         self.assertTrue((self.state / "grub.cfg.before-install").exists())
 
     def test_failed_uninstall_restores_theme(self):
         self.run_script()
         before_dropin = self.dropin.read_bytes()
         before_cfg = self.original.read_bytes()
+        before_hook = self.hook.read_bytes()
         self.run_script("uninstall.sh", case="windows-lost", success=False)
         self.assertEqual(before_dropin, self.dropin.read_bytes())
         self.assertEqual(before_cfg, self.original.read_bytes())
+        self.assertEqual(before_hook, self.hook.read_bytes())
         self.assertTrue(self.theme.exists())
 
     def tearDown(self):
