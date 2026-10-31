@@ -23,5 +23,6 @@ with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as bun
 with zipfile.ZipFile(archive) as bundle:
     assert bundle.testzip() is None
 digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-(DIST / "550w-moss-grub.zip.sha256").write_text(f"{digest}  550w-moss-grub.zip\n", encoding="ascii")
+# Two spaces before the name: the only form sha256sum -c accepts.
+(DIST / "550w-moss-grub.zip.sha256").write_text(f"{digest}  {archive.name}\n", encoding="ascii")
 print(f"{archive}\n{archive.stat().st_size / 1024 / 1024:.2f} MiB\nSHA256 {digest}")
