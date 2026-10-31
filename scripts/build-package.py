@@ -6,7 +6,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 DIST.mkdir(exist_ok=True)
-files = [ROOT / p for p in ("README.md", "install.sh", "uninstall.sh", "check.sh")]
+files = [ROOT / p for p in ("LICENSE", "README.md", "install.sh", "uninstall.sh", "check.sh")]
 for folder in ("theme", "licenses", "scripts"):
     files.extend(path for path in (ROOT / folder).rglob("*") if path.is_file() and "__pycache__" not in path.parts)
 files.extend(ROOT / "docs" / name for name in ("validation.md", "image-edit-prompt.txt", "preview-1080p-ubuntu.png", "preview-1080p-windows.png", "compat-640-returned.png"))

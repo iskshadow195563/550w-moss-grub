@@ -134,3 +134,18 @@ bash scripts/build-preview.sh
 真实主题元素与配置变量参考 [GNU GRUB 主题格式](https://www.gnu.org/software/grub/manual/grub/html_node/Theme-file-format.html) 和 [GNU GRUB 配置](https://www.gnu.org/software/grub/manual/grub/html_node/Simple-configuration.html)。Ubuntu 生成菜单的机制见 [Ubuntu GRUB 2 Setup](https://help.ubuntu.com/community/Grub2/Setup)。
 
 预览 ISO 的启动项是演示占位项，不能用于启动电脑上真实的 Windows 或 Ubuntu；安装包使用你的现有配置。验证环境和结果见 `docs/validation.md`。
+
+## 授权
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+本项目以 [MIT 授权条款](LICENSE) 释出，著作权声明为 `Copyright (c) 2026 GGbone (iskshadow195563)`。
+
+涵盖范围：`install.sh`、`uninstall.sh`、`check.sh`、`scripts/` 内的构建脚本、`theme/` 内的主题设置与由脚本生成的图标和九宫格边框，以及由 imagegen 生成的背景图。可自由使用、修改、再散布与商业使用，条件是保留 `LICENSE` 中的著作权与授权声明。
+
+以下第三方元件不适用 MIT，维持其原始授权：
+
+- **字体：** 由 Noto Sans CJK 转换而成的 GRUB PF2 字体，依 SIL Open Font License 1.1 提供，全文见 [`licenses/Noto-OFL.txt`](licenses/Noto-OFL.txt)。转换后的 `.pf2` 文件同属 OFL 1.1 的涵盖范围。
+- **GRUB：** GNU GPL v3，属电脑上的系统元件，不由本项目散布。
+
+再散布安装包时请同时保留 `LICENSE` 与 `licenses/Noto-OFL.txt`；两者都已包含在发布的 ZIP 内。
